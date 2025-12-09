@@ -168,6 +168,39 @@ export default function Page({ searchParams }) {
 
 ---
 
+## ⚙️ Recommended Configuration
+
+To unlock the full power of Next.js 16 (React Compiler, Turbopack Caching, Standalone Build), use this `next.config.ts` setup:
+
+```typescript
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // ⚡ Enable React Compiler (React 19)
+  reactCompiler: true,
+
+  // 🐳 Optimized for Docker/Self-hosting
+  output: "standalone",
+
+  // 🧹 Clean up production logs
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
+
+  experimental: {
+    // 🚀 Enable Cache Components ("use cache")
+    cacheComponents: true,
+
+    // 🏎️ Persist Turbopack cache to disk (Faster startup)
+    turbopackFileSystemCacheForDev: true,
+  },
+};
+
+export default nextConfig;
+```
+
+---
+
 ## ✅ Rules of the Road
 
 | Rule                 | Description                                                                  |
