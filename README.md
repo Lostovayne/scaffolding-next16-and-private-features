@@ -1,212 +1,36 @@
-# 🚀 Next.js 16 Enterprise Architecture
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-> **Module Pattern · Server/UI Split · Partial Prerendering (PPR) Optimized**
+## Getting Started
 
-This repository defines a battle-tested architecture for Next.js 16 applications. It enforces strictly modular features, non-blocking rendering paths, and clean separation between **Routing** and **Business Logic**.
+First, run the development server:
 
----
-
-## 📂 Project Scaffolding
-
-Copy this structure to start your project. The core principle is **"Routing (`app`) is for Config, Modules (`modules`) are for Code."**
-
-```plaintext
-src/
-├── app/                      # 🌍 ROUTING LAYER (Static Zone)
-│   └── (dashboard)/
-│       └── customers/
-│           └── page.tsx      # ✅ The "Static Shell" (Imports Async Logic)
-│
-├── modules/                  # 📦 BUSINESS LOGIC (Feature Modules)
-│   ├── customers/            # Your Feature Name
-│   │
-│   │   ├── server/           # 🔒 BACKEND (Server Logic)
-│   │   │   ├── actions.ts    # Mutations ("use server")
-│   │   │   └── queries.ts    # Fetching ("use cache")
-│   │
-│   │   ├── ui/               # 🎨 FRONTEND (Presentation)
-│   │   │   ├── views/        # Page Containers (The "View")
-│   │   │   │   └── customers-view.tsx
-│   │   │   └── components/   # Private Components
-│   │   │       ├── list.tsx
-│   │   │       └── header.tsx
-│   │
-│   │   ├── params.ts         # 📎 URL State (Nuqs Parsers)
-│   │   ├── schemas.ts        # 🛡️ Validation (Zod Contracts)
-│   │   └── types.ts          # 📐 TypeScript Definitions
-│
-├── shared/                   # 🌐 SHARED LAYER (Global Utils/UI)
-├── trpc/                     # 🔌 API LAYER (tRPC or similar)
-└── ...
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
----
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## ⚡ How It Works: The "Non-Blocking" Flow
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-To support **PPR (Partial Prerendering)**, we never block the main page with data fetching.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-### The 3-Layer Architecture
+## Learn More
 
-1.  **Layer 1 (The Static Shell)**: `app/page.tsx` renders _instantly_. It shows the page skeleton while data loads.
-2.  **Layer 2 (The Async Logic)**: A dedicated component (e.g., `CustomersData`) handles authentication, permissions, and data fetching in the background.
-3.  **Layer 3 (The View)**: `modules/.../view.tsx` renders the UI once data is ready.
+To learn more about Next.js, take a look at the following resources:
 
-### Visual Flow (Mermaid)
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-```mermaid
-graph TD
-    %% Styling
-    classDef shell fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:black;
-    classDef logic fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:black,stroke-dasharray: 4 4;
-    classDef view fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:black;
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-    %% ENTRY
-    User((User)) --> |URL Request| Page
+## Deploy on Vercel
 
-    %% LAYER 1
-    subgraph L1 ["1️⃣ Layer 1: Static Shell (app/page.tsx)"]
-        Page["Page Component"]:::shell
-        Suspense["< Suspense fallback='Loading...' >"]:::shell
-        Page --> |Instant Render| Suspense
-    end
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-    %% LAYER 2
-    subgraph L2 ["2️⃣ Layer 2: Async Logic (modules/.../ui)"]
-        Logic["< CustomersData > (Async)"]:::logic
-
-        subgraph TASKS ["Blocking Tasks"]
-           Auth["await auth()"]
-           Params["await loadSearchParams()"]
-           Fetch["prefetchQuery()"]
-        end
-
-        Logic --> Auth --> Params --> Fetch
-    end
-
-    %% LAYER 3
-    subgraph L3 ["3️⃣ Layer 3: View Container (modules/.../views)"]
-        View["< CustomersView >"]:::view
-    end
-
-    %% Flow
-    Suspense --> |Streams| Logic
-    Fetch --> |Hydrates| View
-```
-
----
-
-## 🛠️ Step-by-Step Implementation Guide
-
-Follow this guide when creating a new feature (e.g., "Invoices").
-
-### Step 1: Create the Module
-
-Create `src/modules/invoices` with folders `server` and `ui`.
-
-### Step 2: Define the Logic (`server/`)
-
-Write your Zod schemas in `schemas.ts`, then create fetching logic in `server/queries.ts` using Next.js 16 Caching.
-
-```typescript
-// src/modules/invoices/server/queries.ts
-import "use cache"; // Cache Component
-import { cacheLife } from "next/cache";
-
-export async function getInvoices() {
-  cacheLife("minutes");
-  return db.invoices.findMany();
-}
-```
-
-### Step 3: build the UI (`ui/views/`)
-
-Create the View Container. This is what the user sees.
-
-```typescript
-// src/modules/invoices/ui/views/invoices-view.tsx
-export function InvoicesView({ data }) {
-  return (
-    <div>
-      {data.map((inv) => (
-        <InvoiceCard key={inv.id} {...inv} />
-      ))}
-    </div>
-  );
-}
-```
-
-### Step 4: The Async Handoff (`ui/invoices-data.tsx`)
-
-Create the intermediate component that connects logic to UI.
-
-```typescript
-// src/modules/invoices/ui/invoices-data.tsx
-export const InvoicesData = async ({ searchParams }) => {
-  await auth.check(); // Blocking Auth
-  const data = await getInvoices(); // Blocking Fetch
-  return <InvoicesView data={data} />;
-};
-```
-
-### Step 5: The Static Route (`app/invoices/page.tsx`)
-
-Finally, hook it up to the router. **Do not await anything here!**
-
-```typescript
-import { Suspense } from "react";
-import { InvoicesData } from "@/modules/invoices/ui/invoices-data";
-
-export default function Page({ searchParams }) {
-  return (
-    <Suspense fallback={<Skeleton />}>
-      <InvoicesData searchParams={searchParams} />
-    </Suspense>
-  );
-}
-```
-
----
-
-## ⚙️ Recommended Configuration
-
-To unlock the full power of Next.js 16 (React Compiler, Turbopack Caching, Standalone Build), use this `next.config.ts` setup:
-
-```typescript
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  // ⚡ Enable React Compiler (React 19)
-  reactCompiler: true,
-
-  // 🐳 Optimized for Docker/Self-hosting
-  output: "standalone",
-
-  // 🧹 Clean up production logs
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
-  },
-
-  experimental: {
-    // 🚀 Enable Cache Components ("use cache")
-    cacheComponents: true,
-
-    // 🏎️ Persist Turbopack cache to disk (Faster startup)
-    turbopackFileSystemCacheForDev: true,
-  },
-};
-
-export default nextConfig;
-```
-
----
-
-## ✅ Rules of the Road
-
-| Rule                 | Description                                                                  |
-| :------------------- | :--------------------------------------------------------------------------- |
-| **No Await in Root** | Never block `page.tsx` with `await`. Use a suspended component.              |
-| **Module Scope**     | `modules/A` cannot import `modules/B` internals. Use the public `view` only. |
-| **Strict Split**     | Logic stays in `modules/server`. React stays in `modules/ui`.                |
-| **Nuqs Params**      | Use `nuqs` for type-safe URL state management.                               |
-| **Resilience**       | Always wrap async parts with `<ErrorBoundary>`.                              |
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
